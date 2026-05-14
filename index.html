@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reflection Space Mission</title>
+<style>
+:root{
+  --bg1:#050816;--bg2:#0b1f3a;--panel:rgba(255,255,255,.09);--line:rgba(255,255,255,.16);
+  --text:#f8fbff;--muted:#b9c6d8;--cyan:#63e6ff;--gold:#ffd166;--green:#67e8a3;--red:#ff6685;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;font-family:Arial,sans-serif;color:var(--text);
+  background:radial-gradient(circle at 12% 18%,rgba(99,230,255,.16),transparent 22%),
+  radial-gradient(circle at 80% 15%,rgba(255,209,102,.13),transparent 26%),
+  linear-gradient(135deg,var(--bg1),var(--bg2));
+  display:flex;justify-content:center;padding:22px;
+}
+.app{width:min(1120px,100%)}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px}
+h1{margin:0;font-size:clamp(30px,4vw,48px);letter-spacing:-1px}
+.subtitle{margin:5px 0 0;color:var(--muted)}
+.pillRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:rgba(255,255,255,.14);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-weight:800;white-space:nowrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:28px;overflow:hidden;box-shadow:0 18px 55px rgba(0,0,0,.38);backdrop-filter:blur(15px)}
+.mission{height:430px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.01))}
+svg{width:100%;height:100%;display:block}
+.star{fill:rgba(255,255,255,.25)}
+.mirrorCore{fill:url(#mirrorGrad);stroke:rgba(255,255,255,.82);stroke-width:2;filter:url(#mirrorGlow);opacity:.34;transition:.25s}
+.mirrorCore.active{opacity:1}
+.mirrorText{fill:rgba(255,255,255,.72);font-size:15px;font-weight:800}
+.label{fill:rgba(255,255,255,.72);font-size:15px;font-weight:900}
+.beam{fill:none;stroke:url(#beamGrad);stroke-width:8;stroke-linecap:round;stroke-linejoin:round;filter:url(#beamGlow)}
+.preview{fill:none;stroke:rgba(255,255,255,.14);stroke-width:3;stroke-linecap:round;stroke-dasharray:8 10}
+.mapTitle{fill:#ffd166;font-size:20px;font-weight:900}
+.content{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;padding:24px}
+@media(max-width:850px){.content{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start}.pillRow{justify-content:flex-start}}
+.card{background:rgba(255,255,255,.075);border:1px solid var(--line);border-radius:22px;padding:20px}
+.progress{color:var(--cyan);font-weight:900;margin-bottom:8px}
+.bar{height:10px;border-radius:999px;background:rgba(255,255,255,.10);overflow:hidden;margin-bottom:16px}
+.barInner{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--gold));transition:width .35s ease}
+h2{margin:0 0 14px;font-size:24px;line-height:1.25}
+.choice{width:100%;text-align:left;margin:9px 0;padding:14px 15px;border-radius:15px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.09);color:var(--text);font-size:16px;cursor:pointer;transition:.15s}
+.choice:hover{transform:translateY(-1px);background:rgba(99,230,255,.14);border-color:rgba(99,230,255,.46)}
+.choice.correctChoice{background:rgba(103,232,163,.18);border-color:var(--green)}
+.choice.wrongChoice{background:rgba(255,102,133,.18);border-color:var(--red)}
+.feedback{min-height:44px;margin-top:13px;color:var(--muted);line-height:1.45}
+.good{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}
+.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+button.action{border:none;border-radius:14px;padding:12px 15px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,var(--cyan),#d1f9ff);color:#05101d}
+button.secondary{background:rgba(255,255,255,.12);color:var(--text);border:1px solid var(--line)}
+.side h3{color:var(--gold);margin:0 0 10px}.side p,.side li{color:var(--muted);line-height:1.55}.side ul{margin-top:8px;padding-left:20px}
+.mini{font-size:13px;opacity:.9}.endScreen{display:none;text-align:center}.endScreen h2{font-size:36px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div>
+      <h1>Reflection Space Mission</h1>
+      <p class="subtitle">3 maps. Each map has 3 mirrors, then the laser reaches the finish.</p>
+    </div>
+    <div class="pillRow">
+      <div class="pill">Score: <span id="score">0</span>/<span id="total">12</span></div>
+      <div class="pill">Map: <span id="mapNum">1</span>/3</div>
+      <div class="pill">Map Progress: <span id="mapProgress">0</span>/4</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="mission">
+      <svg viewBox="0 0 1120 430" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="beamGrad" x1="0" x2="1">
+            <stop offset="0%" stop-color="#fff7a8"/>
+            <stop offset="55%" stop-color="#ffd166"/>
+            <stop offset="100%" stop-color="#63e6ff"/>
+          </linearGradient>
+          <linearGradient id="mirrorGrad" x1="0" x2="1">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="50%" stop-color="#69e6ff"/>
+            <stop offset="100%" stop-color="#d4fbff"/>
+          </linearGradient>
+          <radialGradient id="planetGrad" cx="30%" cy="25%">
+            <stop offset="0%" stop-color="#e9fbff"/>
+            <stop offset="35%" stop-color="#68d6ff"/>
+            <stop offset="78%" stop-color="#2368ff"/>
+            <stop offset="100%" stop-color="#0b245d"/>
+          </radialGradient>
+          <filter id="beamGlow"><feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#ffd166" flood-opacity=".9"/></filter>
+          <filter id="mirrorGlow"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#63e6ff" flood-opacity=".75"/></filter>
+          <filter id="planetGlow"><feDropShadow dx="0" dy="0" stdDeviation="14" flood-color="#63e6ff" flood-opacity=".55"/></filter>
+        </defs>
+
+        <g id="stars"></g>
+        <text id="mapTitle" x="38" y="40" class="mapTitle">Map 1: Launch Route</text>
+        <polyline id="previewPath" class="preview" points=""/>
+        <polyline id="beam" class="beam" points=""/>
+        <circle id="pulse" cx="92" cy="330" r="8" fill="#fff7a8" opacity=".95"/>
+        <g id="startGroup"></g>
+        <g id="finishGroup"></g>
+        <g id="mirrors"></g>
+      </svg>
+    </div>
+
+    <div class="content">
+      <div class="card" id="quizBox">
+        <div class="progress">Question <span id="qnum">1</span></div>
+        <div class="bar"><div class="barInner" id="bar"></div></div>
+        <h2 id="question">Loading...</h2>
+        <div id="choices"></div>
+        <div id="feedback" class="feedback"></div>
+        <div class="buttons">
+          <button class="action secondary" onclick="restartGame()">Restart</button>
+          <button id="musicBtn" class="action secondary" onclick="toggleMusic()">Turn Music On</button>
+        </div>
+        <p class="mini">Wrong questions come back later. Correct answers build the current map.</p>
+      </div>
+
+      <div class="card side" id="sideBox">
+        <h3>How the Maps Work</h3>
+        <p>Each map uses 3 mirrors before the laser reaches the spaceship. The mirrors are aligned to match the reflection path.</p>
+        <ul>
+          <li>4 correct answers = reach the spaceship.</li>
+          <li>Then the game switches to the next route.</li>
+          <li>Each map ends by directly hitting the spaceship.</li>
+        </ul>
+      </div>
+
+      <div class="card endScreen" id="endScreen">
+        <h2 id="endTitle">Mission Complete!</h2>
+        <p id="endText"></p>
+        <button class="action" onclick="restartGame()">Play Again</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const originalQuestions=[
+{q:"What is reflection?",choices:["Light bouncing off a surface","Light disappearing","Light turning into sound","Light getting colder"],answer:0,explain:"Reflection means light bounces off a surface."},
+{q:"Which object is the best example of reflection?",choices:["A mirror","A blanket","A sponge","A pencil"],answer:0,explain:"A mirror is smooth and shiny, so it reflects light well."},
+{q:"What does the law of reflection say?",choices:["Angle in equals angle out","Light only moves in circles","Light always stops","Sound is faster than light"],answer:0,explain:"The law of reflection says the angle of incidence equals the angle of reflection."},
+{q:"What is the incident ray?",choices:["The ray going toward the surface","The ray bouncing away","The surface itself","A shadow"],answer:0,explain:"Incident ray means the incoming light ray."},
+{q:"What is the reflected ray?",choices:["The ray bouncing away from the surface","The ray before it hits the mirror","The normal line","The light source"],answer:0,explain:"The reflected ray is the light after it bounces away."},
+{q:"What is the normal line?",choices:["An imaginary line perpendicular to the surface","A line parallel to the mirror","A real crack in the mirror","A color of light"],answer:0,explain:"The normal line is imaginary and perpendicular to the surface."},
+{q:"If the angle of incidence is 25°, what is the angle of reflection?",choices:["25°","50°","75°","100°"],answer:0,explain:"Angle in equals angle out, so the reflected angle is 25°."},
+{q:"Why can you see your face in a mirror?",choices:["Light reflects from you to the mirror and back to your eyes","The mirror creates a new face","The mirror absorbs all light","Sound waves draw the image"],answer:0,explain:"You see yourself because light reflects into your eyes."},
+{q:"Which surface reflects light best?",choices:["Smooth shiny metal","Rough carpet","Black cloth","Cardboard"],answer:0,explain:"Smooth shiny surfaces reflect light better than rough surfaces."},
+{q:"What happens to light during reflection?",choices:["It changes direction","It becomes gravity","It stops forever","It turns into matter"],answer:0,explain:"The light changes direction because it bounces."},
+{q:"Angles in a reflection diagram are measured from the...",choices:["normal line","edge of the paper","color of the light","bottom of the mirror"],answer:0,explain:"Angles are measured from the normal line."},
+{q:"Reflection is one example of what kind of behavior?",choices:["Wave behavior","Cooking behavior","Magnetic behavior only","Chemical behavior only"],answer:0,explain:"Reflection is a wave behavior of light."}
+];
+
+const maps=[
+  {
+    title:"Map 1: Launch Route",
+    points:[[90,330],[270,280],[430,150],[620,235],[1030,88]],
+    startLabel:[56,398], finishLabel:[1000,150]
+  },
+  {
+    title:"Map 2: Asteroid Route",
+    points:[[90,95],[260,150],[430,88],[610,205],[1030,320]],
+    startLabel:[56,65], finishLabel:[1000,386]
+  },
+  {
+    title:"Map 3: Final Rescue Route",
+    points:[[92,340],[250,230],[410,320],[590,165],[1028,120]],
+    startLabel:[56,405], finishLabel:[998,184]
+  }
+];
+
+let deck=[],current=null,score=0,totalCorrect=0,questionNumber=0,locked=false;
+let currentMap=0,mapCorrect=0;
+let audioCtx,musicOn=false,musicTimer;
+const scoreEl=document.getElementById("score"),totalEl=document.getElementById("total"),mapNumEl=document.getElementById("mapNum"),mapProgressEl=document.getElementById("mapProgress"),beam=document.getElementById("beam"),pulse=document.getElementById("pulse");
+totalEl.textContent=originalQuestions.length;
+
+function angleBetween(a,b){return Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI}
+function normalizeAngle(a){while(a>180)a-=360;while(a<-180)a+=360;return a}
+function mirrorAngle(prev,hit,next){
+  const inAng=angleBetween(prev,hit);
+  const outAng=angleBetween(hit,next);
+  let diff=normalizeAngle(outAng-inAng);
+  return inAng + diff/2;
+}
+
+function makeStars(){
+  const stars=document.getElementById("stars");stars.innerHTML="";
+  for(let i=0;i<105;i++){
+    const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx",Math.random()*1120);c.setAttribute("cy",Math.random()*430);
+    c.setAttribute("r",Math.random()*1.5+.7);c.setAttribute("class","star");stars.appendChild(c);
+  }
+}
+
+function drawMap(){
+  const m=maps[currentMap];
+  document.getElementById("mapTitle").textContent=m.title;
+  mapNumEl.textContent=currentMap+1;
+  mapProgressEl.textContent=mapCorrect;
+  document.getElementById("previewPath").setAttribute("points",m.points.map(p=>p.join(",")).join(" "));
+
+  const start=document.getElementById("startGroup");
+  start.innerHTML=`
+    <circle cx="${m.points[0][0]}" cy="${m.points[0][1]}" r="48" fill="url(#planetGrad)" filter="url(#planetGlow)"/>
+    <text x="${m.startLabel[0]}" y="${m.startLabel[1]}" class="label">START</text>`;
+
+  const finish=document.getElementById("finishGroup");
+  const f=m.points[m.points.length-1];
+  finish.innerHTML=`
+    <ellipse cx="${f[0]}" cy="${f[1]}" rx="58" ry="34" fill="#83e8f8" filter="url(#mirrorGlow)"/>
+    <circle cx="${f[0]}" cy="${f[1]-38}" r="24" fill="rgba(131,232,248,.55)" stroke="rgba(255,255,255,.78)" stroke-width="3"/>
+    <text x="${m.finishLabel[0]}" y="${m.finishLabel[1]}" class="label">FINISH</text>`;
+
+  const mirrors=document.getElementById("mirrors");
+  mirrors.innerHTML="";
+  for(let i=1;i<=3;i++){
+    const prev=m.points[i-1], hit=m.points[i], next=m.points[i+1];
+    const a=mirrorAngle(prev,hit,next);
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("id","mirror"+i);
+    g.setAttribute("transform",`translate(${hit[0]} ${hit[1]}) rotate(${a})`);
+    g.innerHTML=`
+      <rect class="mirrorCore" x="-50" y="-8" width="100" height="16" rx="8"/>
+      <text class="mirrorText" x="-35" y="36">mirror ${i}</text>`;
+    mirrors.appendChild(g);
+  }
+  updateBeam();
+}
+
+function updateBeam(){
+  const m=maps[currentMap];
+  const visible=m.points.slice(0,Math.min(mapCorrect+1,m.points.length));
+  beam.setAttribute("points",visible.map(p=>p.join(",")).join(" "));
+  const last=visible[visible.length-1];
+  pulse.setAttribute("cx",last[0]);pulse.setAttribute("cy",last[1]);
+  mapProgressEl.textContent=mapCorrect;
+  document.getElementById("bar").style.width=(totalCorrect/originalQuestions.length*100)+"%";
+}
+
+function activateMirror(){
+  if(mapCorrect>=1 && mapCorrect<=3){
+    const core=document.querySelector("#mirror"+mapCorrect+" .mirrorCore");
+    if(core) core.classList.add("active");
+  }
+}
+
+function shuffle(arr){const copy=[...arr];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy}
+
+function restartGame(){
+  deck=shuffle(originalQuestions.map((q,i)=>({...q,id:i})));
+  current=null;score=0;totalCorrect=0;questionNumber=0;locked=false;currentMap=0;mapCorrect=0;
+  scoreEl.textContent=score;
+  document.getElementById("quizBox").style.display="block";
+  document.getElementById("sideBox").style.display="block";
+  document.getElementById("endScreen").style.display="none";
+  drawMap();
+  loadNextQuestion();
+}
+
+function loadNextQuestion(){
+  locked=false;
+  if(totalCorrect>=originalQuestions.length){finishGame();return}
+  if(deck.length===0) deck=shuffle(originalQuestions.map((q,i)=>({...q,id:i})));
+  current=deck.shift();
+  questionNumber++;
+  document.getElementById("qnum").textContent=questionNumber;
+  document.getElementById("question").textContent=current.q;
+  document.getElementById("feedback").textContent="";
+  document.getElementById("feedback").className="feedback";
+  const choicesDiv=document.getElementById("choices");
+  choicesDiv.innerHTML="";
+  current.choices.forEach((choice,i)=>{
+    const btn=document.createElement("button");
+    btn.className="choice";
+    btn.textContent=choice;
+    btn.onclick=()=>checkAnswer(i,btn);
+    choicesDiv.appendChild(btn);
+  });
+}
+
+function checkAnswer(choiceIndex,button){
+  if(locked)return;locked=true;
+  const buttons=document.querySelectorAll(".choice");
+  buttons[current.answer].classList.add("correctChoice");
+  const feedback=document.getElementById("feedback");
+
+  if(choiceIndex===current.answer){
+    score++;totalCorrect++;mapCorrect++;
+    scoreEl.textContent=score;
+    feedback.textContent="Correct! "+current.explain;
+    feedback.className="feedback good";
+    updateBeam(); activateMirror(); playCorrectSound();
+
+    if(mapCorrect===4 && currentMap<2){
+      setTimeout(()=>{
+        currentMap++;
+        mapCorrect=0;
+        makeStars();
+        drawMap();
+        loadNextQuestion();
+      },1500);
+      return;
+    }
+  }else{
+    button.classList.add("wrongChoice");
+    feedback.textContent="Not quite. "+current.explain+" This question will come back later.";
+    feedback.className="feedback bad";
+    deck.push(current);
+    playWrongSound();
+  }
+  setTimeout(loadNextQuestion,choiceIndex===current.answer?1200:1650);
+}
+
+function finishGame(){
+  document.getElementById("bar").style.width="100%";
+  setTimeout(()=>{
+    document.getElementById("quizBox").style.display="none";
+    document.getElementById("sideBox").style.display="none";
+    document.getElementById("endScreen").style.display="block";
+    const percent=Math.round(score/questionNumber*100);
+    document.getElementById("endTitle").textContent="Mission Complete!";
+    document.getElementById("endText").textContent="You finished all 3 reflection maps. Final accuracy: "+percent+"% ("+score+" correct out of "+questionNumber+" attempts).";
+    playFinishSound();
+  },500);
+}
+
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)}
+function tone(freq,duration,volume=.04,type="sine"){if(!audioCtx)return;const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=type;osc.frequency.value=freq;gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}
+function playCorrectSound(){if(!audioCtx)return;tone(520,.08,.05);setTimeout(()=>tone(760,.10,.05),80)}
+function playWrongSound(){if(!audioCtx)return;tone(170,.16,.05,"sawtooth")}
+function playFinishSound(){if(!audioCtx)return;[523,659,784,1046].forEach((n,i)=>setTimeout(()=>tone(n,.12,.05,"triangle"),i*120))}
+function toggleMusic(){initAudio();if(audioCtx.state==="suspended")audioCtx.resume();musicOn=!musicOn;document.getElementById("musicBtn").textContent=musicOn?"Turn Music Off":"Turn Music On";musicOn?startMusic():stopMusic()}
+function startMusic(){stopMusic();const notes=[196,247,294,330,294,247,220,247];let i=0;musicTimer=setInterval(()=>{if(musicOn){tone(notes[i%notes.length],.18,.018,"triangle");i++}},285)}
+function stopMusic(){if(musicTimer)clearInterval(musicTimer)}
+
+makeStars();
+restartGame();
+</script>
+</body>
+</html>
